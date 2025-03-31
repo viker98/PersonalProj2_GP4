@@ -4,6 +4,10 @@
 #include "PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "DrawDebugHelpers.h"
+#include "CollisionQueryParams.h"
+#include "EnemyCharacter.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Components/CapsuleComponent.h"
 
 APlayerCharacter::APlayerCharacter()
@@ -32,20 +36,60 @@ APlayerCharacter::APlayerCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); 
 	FollowCamera->bUsePawnControlRotation = false;
 
-	widgetHudClass = nullptr;
-	PlayerHud = nullptr;
+	//gameplayWidgetHudClass = nullptr;
+	//PlayerHud = nullptr;
+	isDead = false;
 }
+
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if(widgetHudClass)
+	AController* controller = GetController();
+	ControllerComp = Cast<APlayerController>(controller);
+	isLockedOn = false;
+
+	if(gameplayWidgetHudClass)
 	{
-		
-		PlayerHud = CreateWidget<UPlayerUserWidget>(GetWorld(), widgetHudClass);
+		PlayerHud = CreateWidget<UPlayerUserWidget>(GetWorld(), gameplayWidgetHudClass);
 		PlayerHud->AddToPlayerScreen();
 	}
+}
+void APlayerCharacter::Tick(float DeltaTime)
+{
+	if (lockOnTarget)
+	{
+		FRotator Rotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(),lockOnTarget->GetActorLocation());
+		GetController()->SetControlRotation(Rotation);
+	}
+}
+
+void APlayerCharacter::OnDead()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	if (ControllerComp != nullptr)
+	{
+		DisableInput(ControllerComp);
+	}
+
+	if (isDead)
+	{
+		return;
+	}
+	PlayerHud->RemoveFromViewport();
+
+	UDeathWidget* deathhud;
+	deathhud = CreateWidget<UDeathWidget>(GetWorld(), deathWidgetClass);
+	deathhud->AddToPlayerScreen();
+
+	
+	ControllerComp->SetShowMouseCursor(true);
+	FInputModeGameAndUI inputMode;
+
+	inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockInFullscreen);
+	ControllerComp->SetInputMode(inputMode);
+	isDead = true;
 }
 
 void APlayerCharacter::Attack()
@@ -54,7 +98,7 @@ void APlayerCharacter::Attack()
 	float MontageTime = PlayAnimMontage(AttackMontage);
 	DisableInput(ControllerComp);
 	FTimerHandle MontageTimerHandle;
-	GetWorldTimerManager().SetTimer(MontageTimerHandle, this, &APlayerCharacter::FinishedAnimation, MontageTime - 0.4f);
+	GetWorldTimerManager().SetTimer(MontageTimerHandle, this, &APlayerCharacter::FinishedAnimation, MontageTime - AttackMovementTimer);
 
 }
 void APlayerCharacter::Roll()
@@ -64,17 +108,67 @@ void APlayerCharacter::Roll()
 	float MontageTime = PlayAnimMontage(RollMontage);
 	DisableInput(ControllerComp);
 	FTimerHandle MontageTimerHandle;
-	GetWorldTimerManager().SetTimer(MontageTimerHandle, this, &APlayerCharacter::FinishedAnimation, MontageTime - 0.7f);
+	GetWorldTimerManager().SetTimer(MontageTimerHandle, this, &APlayerCharacter::FinishedAnimation, MontageTime - RollMovementTimer);
 
 }
 void APlayerCharacter::Block()
 {
 	PlayAnimMontage(BlockMontage);
+	isBlocking = true;
 }
 void APlayerCharacter::UnBlock()
 {
 	StopAnimMontage(BlockMontage);
+	isBlocking = false;
+}
+void APlayerCharacter::LockOn()
+{
+	if (!isLockedOn)
+	{
+		isLockedOn = true;
+		TArray<FHitResult> hitresults; 
 
+		FCollisionQueryParams queryParams;
+		queryParams.AddIgnoredActor(this);
+
+		bool bHit = GetWorld()->SweepMultiByChannel(
+			hitresults,
+			GetActorLocation(),
+			GetActorForwardVector() * 500 + GetActorLocation(),
+			FQuat::Identity,
+			ECC_Visibility,
+			FCollisionShape::MakeSphere(300.0f),
+			queryParams
+			);
+
+		if (bHit)
+		{
+			AActor* NextTarget = nullptr;
+			float MinDistance = TNumericLimits<float>::Max();
+			for (const FHitResult& Hit : hitresults)
+			{
+				AActor* HitActor = Hit.GetActor();
+				if (HitActor->IsA(AEnemyCharacter::StaticClass()))
+				{
+					float DistanceToTarget = FVector::Distance(GetActorLocation(), HitActor->GetActorLocation());
+					if (DistanceToTarget < MinDistance)
+					{
+						MinDistance = DistanceToTarget;
+						NextTarget = HitActor;
+					}
+				}
+			}
+
+			lockOnTarget = NextTarget;
+
+			//UE_LOG(LogTemp, Warning, TEXT("Hit: %s"), *lockOnTarget->GetName());
+		}		
+	}
+	else
+	{
+		lockOnTarget = nullptr;
+		isLockedOn = false;
+	}
 }
 UPlayerUserWidget* APlayerCharacter::GetHud()
 {
@@ -82,8 +176,15 @@ UPlayerUserWidget* APlayerCharacter::GetHud()
 }
 void APlayerCharacter::UpdateHud()
 {
-
 	PlayerHud->SetHealth(health, MaxHealth);
+}
+bool APlayerCharacter::GetIsBlocking()
+{
+	return isBlocking;
+}
+bool APlayerCharacter::GetIsRolling()
+{
+	return isRolling;
 }
 void APlayerCharacter::FinishedAnimation()
 {
@@ -130,6 +231,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Started, this, &APlayerCharacter::Block);
 		EnhancedInputComponent->BindAction(BlockAction, ETriggerEvent::Completed, this, &APlayerCharacter::UnBlock);
 
+		//Lock On
+		EnhancedInputComponent->BindAction(LockOnAction, ETriggerEvent::Completed, this, &APlayerCharacter::LockOn);
 
 
 	}

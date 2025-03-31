@@ -46,6 +46,8 @@ public:
 	
 	UFUNCTION()
 	void OnLeave(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	float GetDamage();
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "SkeletalMesh")
 	USkeletalMeshComponent* SkeletalMeshComp;
@@ -64,7 +66,10 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "VALUE")
 	float damage;
 
+
+
 	void ResetCollision();
+
 
 };
 

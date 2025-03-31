@@ -27,6 +27,19 @@ private:
 	class UAISenseConfig_Sight* SightConfig;
 
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
-	class UBehaviorTree* BehaviorTree;
+	UBehaviorTree* BehaviorTree;
+
+
+	UFUNCTION()
+	void OnPerceptionUpdated(AActor* TargetActor, FAIStimulus Stimulus);
+	//void OnPerceptionForgotten(AActor* TargetActor);
+
+	void SetCurrentTarget(AActor* NewTarget);
+	UObject* GetCurrentTarget();
+
+	UBehaviorTree* GetBehaviorTree();
+
+	FName playerLocationName = "PlayerRef";
+	FName lastKnownLocationName = "LastKnownLocation";
 
 };

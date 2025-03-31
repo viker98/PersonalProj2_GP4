@@ -9,6 +9,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "PlayerUserWidget.h"
+#include "DeathWidget.h"
 #include "InputActionValue.h"
 
 #include "PlayerCharacter.generated.h"
@@ -39,8 +40,11 @@ class APlayerCharacter : public AMain_Character
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+
 public:
 	APlayerCharacter();
+
+	virtual void Tick(float DeltaTime) override;
 
 public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -55,12 +59,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* RollAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LockOnAction;
+
+
 	UPlayerUserWidget* GetHud();
 
 	void UpdateHud();
+
+	bool GetIsBlocking();
+	bool GetIsRolling();
 private:
+
 	APlayerController* ControllerComp;
 
+	AActor* lockOnTarget;
+	
 	void FinishedAnimation();
 
 	void Attack();
@@ -70,13 +84,31 @@ private:
 	void Block();
 	void UnBlock();
 
+	void LockOn();
+
+	
+	bool isBlocking;
+
+	bool isLockedOn;
+
 	bool isRolling;
 
+	bool isDead;
+
 	UPROPERTY(EditAnywhere)
-	TSubclassOf<UPlayerUserWidget> widgetHudClass;
+	float RollMovementTimer;
+
+	UPROPERTY(EditAnywhere)
+	float AttackMovementTimer;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UPlayerUserWidget> gameplayWidgetHudClass;
 
 	UPROPERTY()
 	UPlayerUserWidget* PlayerHud;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UDeathWidget> deathWidgetClass;
 protected:
 	void Move(const FInputActionValue& Value);
 
@@ -85,5 +117,7 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void BeginPlay() override;
+
+	virtual void OnDead() override;
 
 };

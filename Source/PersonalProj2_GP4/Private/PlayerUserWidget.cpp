@@ -12,6 +12,7 @@ UPlayerUserWidget::UPlayerUserWidget()
 }
 */
 
+
 void UPlayerUserWidget::SetHealth(float CurrentHealth, float MaxHealth)
 {
 	if (HealthBar)

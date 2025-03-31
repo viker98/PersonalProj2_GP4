@@ -2,6 +2,9 @@
 
 
 #include "Main_Character.h"
+#include "PlayerCharacter.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "EnemyCharacter.h"
 
 // Sets default values
 AMain_Character::AMain_Character()
@@ -48,11 +51,103 @@ void AMain_Character::AddEquipment(TSubclassOf<AEquipment> equipmentToSpawn)
 
 	FAttachmentTransformRules attachRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
 	spawnedEquipment->AttachToComponent(GetMesh(), attachRules, spawnedEquipment->GetSocketName());
+
+	CurrentEquipment.Add(spawnedEquipment);
 }
 
-void AMain_Character::TakeDamage(int damageTaken)
+void AMain_Character::RemoveEquipment(AEquipment* equipmentToRemove)
+{
+	for (AEquipment* equipment : CurrentEquipment)
+	{
+		if (equipment == equipmentToRemove)
+		{
+			CurrentEquipment.Remove(equipment);
+			equipment->Destroy();
+		}
+	}
+}
+
+void AMain_Character::Damage(int damageTaken)
 {
 	health -= damageTaken;
-
+	if (health <= 0)
+	{
+		OnDead();
+		PlayAnimMontage(DeathMontage);
 	}
+}
+
+void AMain_Character::RemoveAllEquipment()
+{
+	for (AEquipment* equipment : CurrentEquipment)
+	{
+		CurrentEquipment.Remove(equipment);
+		equipment->Destroy();
+	}
+}
+
+void AMain_Character::HitDetect()
+{
+	TArray<FHitResult> outHits;
+
+	FCollisionQueryParams queryParams;
+	queryParams.AddIgnoredActor(this);
+	TSet<AActor*> AlreadyHitActors;
+
+	bool bHit = GetWorld()->SweepMultiByChannel(
+		outHits,
+		CurrentEquipment[0]->GetActorLocation(),
+		CurrentEquipment[0]->GetActorLocation(),
+		FQuat::Identity,
+		ECC_Pawn,
+		FCollisionShape::MakeSphere(50),
+		queryParams
+	);
+
+	if(bHit)
+	{
+		for (const FHitResult& Hit : outHits)
+		{
+
+			AActor* HitActor = Hit.GetActor();
+			if (AlreadyHitActors.Contains(HitActor))
+			{
+
+				return;
+			}
+			else if(APlayerCharacter* playerRef = Cast<APlayerCharacter>(HitActor))
+			{
+				if (playerRef->GetIsRolling())
+				{
+					return;
+				}
+
+				if (playerRef->GetIsBlocking())
+				{
+					playerRef->Damage(CurrentEquipment[0]->GetDamage() /2);
+					AlreadyHitActors.Add(playerRef);
+				}
+				else
+				{
+					playerRef->Damage(CurrentEquipment[0]->GetDamage());
+					AlreadyHitActors.Add(playerRef);
+				}
+				playerRef->UpdateHud();
+
+			}
+			else if (AEnemyCharacter* EnemyRef = Cast<AEnemyCharacter>(HitActor))
+			{
+				AlreadyHitActors.Add(HitActor);
+				UE_LOG(LogTemp,Warning,TEXT("DAMAGE"))
+				EnemyRef->Damage(CurrentEquipment[0]->GetDamage());
+				EnemyRef->UpdateHud();
+			}
+		}
+	}
+}
+
+void AMain_Character::OnDead()
+{
+	//override in child class :3
+}
 

@@ -23,7 +23,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Animations")
 	UAnimMontage* AttackMontage;
 
-	UPROPERTY(EditAnywhere, Category = "Animations")
+	UPROPERTY(EditAnywhere, Category = "Animation3s")
 	UAnimMontage* BlockMontage;
 
 	UPROPERTY(EditAnywhere, Category = "Animations")
@@ -44,10 +44,27 @@ public:
 
 public:
 	void AddEquipment(TSubclassOf<AEquipment> equipmentToSpawn);
-	void TakeDamage(int damageTaken);
+	void RemoveEquipment(AEquipment* equipmentToRemove);
+	void Damage(int damageTaken);
+	void RemoveAllEquipment();
+
+
+	UFUNCTION(BlueprintCallable)
+	void HitDetect();
+
+protected:
+
+	UPROPERTY(VisibleAnywhere)
+	TArray<AEquipment*> CurrentEquipment;
+
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TArray<TSubclassOf<AEquipment>> StartingEquipment;
 
+
+	virtual void OnDead();
+
+	UPROPERTY(EditDefaultsOnly)
+	UAnimMontage* DeathMontage;
 
 };

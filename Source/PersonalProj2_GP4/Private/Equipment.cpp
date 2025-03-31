@@ -30,6 +30,7 @@ AEquipment::AEquipment()
 // Called when the game starts or when spawned
 void AEquipment::BeginPlay()
 {
+
 	Super::BeginPlay();
 	if (IsAWeapon)
 	{
@@ -60,12 +61,11 @@ USkeletalMeshComponent* AEquipment::GetMesh()
 
 void AEquipment::OnEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-
-	if (AMain_Character* hitEnemy = Cast<AMain_Character>(OtherActor)) 
+	/*
+	if (AMain_Character* hitCharacter = Cast<AMain_Character>(OtherActor)) 
 	{
 		if(this->GetAttachParentActor() != OtherActor)
 		{
-			hitEnemy->TakeDamage(damage);
 			boxCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 			FTimerHandle MontageTimerHandle;
@@ -73,11 +73,26 @@ void AEquipment::OnEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor
 			
 			if(APlayerCharacter* playerRef = Cast<APlayerCharacter>(OtherActor))
 			{
-				UE_LOG(LogTemp,Warning, TEXT("DSJF"))
 				playerRef->UpdateHud();
+				if (playerRef->GetIsBlocking())
+				{
+					hitCharacter->TakeDamage(damage/2);
+				}
+				else
+				{
+					hitCharacter->TakeDamage(damage);
+				}
+
+			}
+			else if (AEnemyCharacter* EnemyRef = Cast<AEnemyCharacter>(OtherActor))
+			{
+				EnemyRef->UpdateHud();
+				hitCharacter->TakeDamage(damage);
 			}
 		}
 	}
+	*/
+	
 
 
 	/*
@@ -90,6 +105,11 @@ void AEquipment::OnEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor
 
 void AEquipment::OnLeave(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+}
+
+float AEquipment::GetDamage()
+{
+	return damage;
 }
 
 void AEquipment::ResetCollision()

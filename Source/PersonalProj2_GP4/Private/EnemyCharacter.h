@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Main_Character.h"
+#include "Components/WidgetComponent.h"
+#include "PlayerUserWidget.h"
 #include "EnemyCharacter.generated.h"
 
 /**
@@ -16,4 +18,16 @@ class AEnemyCharacter : public AMain_Character
 	
 public:
 	AEnemyCharacter();
+
+	void UpdateHud();
+
+	void PlayAttackAnim();
+
+private:
+	virtual void OnDead() override;
+
+	UPROPERTY(EditDefaultsOnly)
+	UWidgetComponent* overheadWidget;
+
+
 };
